@@ -1,12 +1,12 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface Options extends Document {
-  label: string;
+  id: string;
   value: string;
 }
 
 const OptionsSchema: Schema<Options> = new Schema({
-  label: {
+  id: {
     type: String,
   },
   value: {
@@ -15,9 +15,9 @@ const OptionsSchema: Schema<Options> = new Schema({
 });
 
 export interface FormField {
-  questionId: mongoose.Types.ObjectId;
-  label: string;
-  placeholder: string;
+  questionId: string;
+  title: string;
+  helpText: string;
   fieldType: string;
   required: boolean;
   options: Options[];
@@ -25,15 +25,14 @@ export interface FormField {
 
 export const FormFieldSchema: Schema<FormField> = new Schema({
   questionId: {
-    type: Schema.Types.ObjectId,
-    default: () => new mongoose.Types.ObjectId(),
-    required: true,
-  },
-  label: {
     type: String,
-    required: [true, "Label is required"],
+    required: [true, "Question ID is required"],
   },
-  placeholder: {
+  title: {
+    type: String,
+    required: [true, "Title is required"],
+  },
+  helpText: {
     type: String,
   },
   fieldType: {
@@ -54,10 +53,25 @@ export const FormFieldSchema: Schema<FormField> = new Schema({
     type: Boolean,
     default: false,
   },
-  options: [OptionsSchema],
+  options: {
+    type: [OptionsSchema],
+    validate: {
+      validator: function (this: FormField, options: Options[]) {
+        // If fieldType is "radio" or "checkbox", options must be present
+        if (this.fieldType === "radio" || this.fieldType === "checkbox") {
+          return Array.isArray(options) && options.length > 0;
+        }
+        // Otherwise, options should not exist or be an empty array
+        return options === undefined || options.length === 0;
+      },
+      message:
+        "Options are required for 'radio' and 'checkbox' field types and should be empty for other field types.",
+    },
+  },
 });
 
 export interface Form extends Document {
+  id: mongoose.Types.ObjectId;
   title: string;
   description: string;
   isPublished: boolean;
